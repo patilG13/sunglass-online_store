@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Orders - SunStyle{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>Manage Orders</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>
+                                <strong>{{ order.order_number }}</strong>
+                            </td>
+                            <td>
+                                {{ order.user.first_name }} {{ order.user.last_name }}
+                                <br><small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+                            <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>₹{{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if order.status == 'delivered' %}bg-success
+                                    {% elif order.status == 'shipped' %}bg-primary
+                                    {% elif order.status == 'confirmed' %}bg-info
+                                    {% elif order.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ order.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if order.payment_status == 'completed' %}bg-success
+                                    {% elif order.payment_status == 'pending' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ order.payment_status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#orderDetails{{ order.id }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown">
+                                        Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'pending')">Pending</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'confirmed')">Confirmed</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'shipped')">Shipped</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'delivered')">Delivered</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'cancelled')">Cancelled</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Order Details Modal -->
+                        <div class="modal fade" id="orderDetails{{ order.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Order Details - {{ order.order_number }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-4">
+                                            <div class="col-md-6">
+                                                <h6>Customer Information</h6>
+                                                <p><strong>Name:</strong> {{ order.user.first_name }} {{ order.user.last_name }}</p>
+                                                <p><strong>Email:</strong> {{ order.user.email }}</p>
+                                                <p><strong>Phone:</strong> {{ order.user.phone or 'N/A' }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Shipping Address</h6>
+                                                <p class="text-muted">{{ order.shipping_address|replace('\n', '<br>')|safe }}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mb-4">
+                                            <div class="col-md-6">
+                                                <h6>Order Information</h6>
+                                                <p><strong>Order Date:</strong> {{ order.created_at.strftime('%B %d, %Y %H:%M') }}</p>
+                                                <p><strong>Payment Method:</strong> {{ order.payment_method|replace('_', ' ')|title }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Order Status</h6>
+                                                <form action="{{ url_for('admin_update_order_status', order_id=order.id) }}" method="POST" class="mb-3">
+                                                    <div class="input-group">
+                                                        <select class="form-select" name="status">
+                                                            <option value="pending" {{ 'selected' if order.status == 'pending' }}>Pending</option>
+                                                            <option value="confirmed" {{ 'selected' if order.status == 'confirmed' }}>Confirmed</option>
+                                                            <option value="shipped" {{ 'selected' if order.status == 'shipped' }}>Shipped</option>
+                                                            <option value="delivered" {{ 'selected' if order.status == 'delivered' }}>Delivered</option>
+                                                            <option value="cancelled" {{ 'selected' if order.status == 'cancelled' }}>Cancelled</option>
+                                                        </select>
+                                                        <button type="submit" class="btn btn-primary">Update</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        
+                                        <h6>Order Items</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Product</th>
+                                                        <th>Price</th>
+                                                        <th>Quantity</th>
+                                                        <th>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in order.order_items %}
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <img src="https://via.placeholder.com/40x40?text={{ item.product.name|replace(' ', '+') }}" 
+                                                                     class="rounded me-2" alt="{{ item.product.name }}">
+                                                                <div>
+                                                                    <strong>{{ item.product.name }}</strong><br>
+                                                                    <small class="text-muted">{{ item.product.brand }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>₹{{ "%.2f"|format(item.price) }}</td>
+                                                        <td>{{ item.quantity }}</td>
+                                                        <td>₹{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                                        <td><strong>₹{{ "%.2f"|format(order.total_amount) }}</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
+                                                        <td><strong>₹5.00</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Tax:</strong></td>
+                                                        <td><strong>₹{{ "%.2f"|format(order.total_amount * 0.1) }}</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                                        <td><strong>₹{{ "%.2f"|format(order.total_amount + 5 + (order.total_amount * 0.1)) }}</strong></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateOrderStatus(orderId, status) {
+    if (confirm('Are you sure you want to update the order status?')) {
+        // This would typically be an AJAX call to update the order status
+        fetch(`/admin/update_order_status/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

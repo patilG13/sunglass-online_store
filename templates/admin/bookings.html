@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Bookings - SunStyle{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>Manage Bookings</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Booking #</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Pickup Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Booked On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr>
+                            <td>
+                                <strong>{{ booking.booking_number }}</strong>
+                            </td>
+                            <td>
+                                {{ booking.user.first_name }} {{ booking.user.last_name }}
+                                <br><small class="text-muted">{{ booking.user.email }}</small>
+                            </td>
+                            <td>
+                                {% if booking.booking_items %}
+                                {{ booking.booking_items[0].product.name }}
+                                {% if booking.booking_items|length > 1 %}
+                                <br><small>+ {{ booking.booking_items|length - 1 }} more items</small>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.pickup_date.strftime('%Y-%m-%d') }}</td>
+                            <td>₹{{ "%.2f"|format(booking.total_amount) }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if booking.status == 'confirmed' %}bg-success
+                                    {% elif booking.status == 'reserved' %}bg-primary
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ booking.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ booking.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#bookingDetails{{ booking.id }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown">
+                                        Status
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" 
+                                               onclick="updateBookingStatus({{ booking.id }}, 'reserved')">Reserved</a></li>
+                                        <li><a class="dropdown-item" href="#" 
+                                               onclick="updateBookingStatus({{ booking.id }}, 'confirmed')">Confirmed</a></li>
+                                        <li><a class="dropdown-item" href="#" 
+                                               onclick="updateBookingStatus({{ booking.id }}, 'cancelled')">Cancelled</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Booking Details Modal -->
+                        <div class="modal fade" id="bookingDetails{{ booking.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Booking Details - {{ booking.booking_number }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-4">
+                                            <div class="col-md-6">
+                                                <h6>Customer Information</h6>
+                                                <p><strong>Name:</strong> {{ booking.user.first_name }} {{ booking.user.last_name }}</p>
+                                                <p><strong>Email:</strong> {{ booking.user.email }}</p>
+                                                <p><strong>Phone:</strong> {{ booking.user.phone or 'N/A' }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Booking Information</h6>
+                                                <p><strong>Booking Date:</strong> {{ booking.created_at.strftime('%B %d, %Y') }}</p>
+                                                <p><strong>Pickup Date:</strong> {{ booking.pickup_date.strftime('%B %d, %Y') }}</p>
+                                                <p><strong>Status:</strong> 
+                                                    <span class="badge 
+                                                        {% if booking.status == 'confirmed' %}bg-success
+                                                        {% elif booking.status == 'reserved' %}bg-primary
+                                                        {% else %}bg-danger{% endif %}">
+                                                        {{ booking.status|title }}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <h6>Booked Items</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Product</th>
+                                                        <th>Price</th>
+                                                        <th>Quantity</th>
+                                                        <th>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in booking.booking_items %}
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <img src="https://via.placeholder.com/40x40?text={{ item.product.name|replace(' ', '+') }}" 
+                                                                     class="rounded me-2" alt="{{ item.product.name }}">
+                                                                <div>
+                                                                    <strong>{{ item.product.name }}</strong><br>
+                                                                    <small class="text-muted">{{ item.product.brand }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>₹{{ "%.2f"|format(item.price) }}</td>
+                                                        <td>{{ item.quantity }}</td>
+                                                        <td>₹{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                                        <td><strong>₹{{ "%.2f"|format(booking.total_amount) }}</strong></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        {% if booking.status == 'reserved' %}
+                                        <button type="button" class="btn btn-primary" 
+                                                onclick="updateBookingStatus({{ booking.id }}, 'confirmed')">
+                                            Confirm Booking
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateBookingStatus(bookingId, status) {
+    if (confirm('Are you sure you want to update the booking status?')) {
+        // This would typically be an AJAX call to update the booking status
+        alert(`Booking ${bookingId} status would be updated to ${status}`);
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

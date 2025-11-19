@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings - SunStyle{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>My Bookings</h2>
+    
+    {% if bookings %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Booking #</th>
+                            <th>Product</th>
+                            <th>Pickup Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Booked On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr>
+                            <td>
+                                <strong>{{ booking.booking_number }}</strong>
+                            </td>
+                            <td>
+                                {% if booking.booking_items %}
+                                {{ booking.booking_items[0].product.name }}
+                                {% if booking.booking_items|length > 1 %}
+                                + {{ booking.booking_items|length - 1 }} more
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.pickup_date.strftime('%Y-%m-%d') }}</td>
+                            <td>${{ "%.2f"|format(booking.total_amount) }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if booking.status == 'confirmed' %}bg-success
+                                    {% elif booking.status == 'reserved' %}bg-primary
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ booking.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ booking.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#bookingDetails{{ booking.id }}">
+                                    View Details
+                                </button>
+                                {% if booking.status == 'reserved' %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="cancelBooking({{ booking.id }})">
+                                    Cancel
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        
+                        <!-- Booking Details Modal -->
+                        <div class="modal fade" id="bookingDetails{{ booking.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Booking Details - {{ booking.booking_number }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-4">
+                                            <div class="col-md-6">
+                                                <h6>Booking Information</h6>
+                                                <p><strong>Booking Date:</strong> {{ booking.created_at.strftime('%B %d, %Y') }}</p>
+                                                <p><strong>Pickup Date:</strong> {{ booking.pickup_date.strftime('%B %d, %Y') }}</p>
+                                                <p><strong>Status:</strong> 
+                                                    <span class="badge 
+                                                        {% if booking.status == 'confirmed' %}bg-success
+                                                        {% elif booking.status == 'reserved' %}bg-primary
+                                                        {% else %}bg-danger{% endif %}">
+                                                        {{ booking.status|title }}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <h6>Booked Items</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Product</th>
+                                                        <th>Price</th>
+                                                        <th>Quantity</th>
+                                                        <th>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in booking.booking_items %}
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <img src="https://via.placeholder.com/40x40?text={{ item.product.name|replace(' ', '+') }}" 
+                                                                     class="rounded me-2" alt="{{ item.product.name }}">
+                                                                <div>
+                                                                    <strong>{{ item.product.name }}</strong><br>
+                                                                    <small class="text-muted">{{ item.product.brand }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>${{ "%.2f"|format(item.price) }}</td>
+                                                        <td>{{ item.quantity }}</td>
+                                                        <td>${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                                        <td><strong>${{ "%.2f"|format(booking.total_amount) }}</strong></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        {% if booking.status == 'reserved' %}
+                                        <button type="button" class="btn btn-danger" onclick="cancelBooking({{ booking.id }})">
+                                            Cancel Booking
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-calendar-check fa-4x text-muted mb-3"></i>
+        <h3>No bookings yet</h3>
+        <p class="text-muted">You haven't made any bookings with us yet.</p>
+        <a href="{{ url_for('products') }}" class="btn btn-primary">Browse Products</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function cancelBooking(bookingId) {
+    if (confirm('Are you sure you want to cancel this booking?')) {
+        // This would typically be an AJAX call to cancel the booking
+        alert('Booking cancellation feature would be implemented here.');
+    }
+}
+</script>
+{% endblock %}
